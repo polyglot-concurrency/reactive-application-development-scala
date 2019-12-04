@@ -1,17 +1,24 @@
 import java.util.Locale
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.typed.ActorSystem
 import Tourist.Start
+import akka.actor.typed.Behavior
+import akka.actor.typed.scaladsl.Behaviors
 
 object Main extends App {
-  val system: ActorSystem = ActorSystem("GuideSystem")
 
-  val guideProps: Props = Props[Guidebook]
-  val guidebook: ActorRef = system.actorOf(guideProps,"guidebook")
+  sealed trait Command
 
-  val tourProps: Props =
-    Props(classOf[Tourist], guidebook)
-  val tourist: ActorRef = system.actorOf(tourProps)
+  ActorSystem(Main(), "GuideSystem")
 
-  tourist ! Start(Locale.getISOCountries)
+  def apply(): Behavior[Command] = Behaviors.setup { context =>
+    val guidebook = context.spawn(Guidebook(), "guidebook")
+    val tourist   = context.spawn(Tourist(), "tourist")
+
+    tourist ! Start(Locale.getISOCountries, guidebook)
+
+    Behaviors.same
+
+  }
+
 }

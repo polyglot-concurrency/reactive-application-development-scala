@@ -1,22 +1,25 @@
+import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.ActorRef
+import akka.actor.typed.Behavior
+
 object Tourist {
 
-  case class Guidance(code: String, description: String)
+  sealed trait Command
 
-  case class Start(codes: Seq[String])
+  final case class Guidance(code: String, description: String) extends Command
 
-}
+  final case class Start(codes: Seq[String], replyTo: ActorRef[Guidebook.Command]) extends Command
 
-import akka.actor.{Actor, ActorRef}
+  def apply(): Behavior[Command] = Behaviors.receive { (ctx, msg) =>
+    msg match {
+      case Start(codes, replyTo) =>
+        codes.foreach(replyTo ! Guidebook.Inquiry(_, ctx.self))
+        Behaviors.same
 
-import Guidebook.Inquiry
-import Tourist.{Guidance, Start}
-
-class Tourist(guidebook: ActorRef) extends Actor {
-
-  override def receive = {
-    case Start(codes) =>
-      codes.foreach(guidebook ! Inquiry(_))
-    case Guidance(code, description) =>
-      println(s"$code: $description")
+      case Guidance(code, description) =>
+        println(s"$code: $description")
+        Behaviors.same
+    }
   }
+
 }
